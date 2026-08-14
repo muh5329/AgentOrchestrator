@@ -1,0 +1,78 @@
+{
+  "name": "agent-orchestrator",
+  "version": "0.1.0",
+  "description": "An AI-native development environment for creating, scheduling, judging and recursively orchestrating autonomous agents.",
+  "main": "./out/main/index.js",
+  "author": "Agent Orchestrator",
+  "license": "MIT",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "npm run typecheck && electron-vite build",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "predev": "node scripts/ensure-native.mjs electron",
+    "prestart": "node scripts/ensure-native.mjs electron",
+    "pretest": "node scripts/ensure-native.mjs node",
+    "prepack:mac": "node scripts/ensure-native.mjs electron",
+    "predist:mac": "node scripts/ensure-native.mjs electron",
+    "rebuild:electron": "node scripts/ensure-native.mjs electron",
+    "rebuild:node": "node scripts/ensure-native.mjs node",
+    "db:generate": "drizzle-kit generate",
+    "pack:mac": "npm run build && electron-builder --mac --dir",
+    "dist:mac": "npm run build && electron-builder --mac"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "better-sqlite3": "^11.10.0",
+    "cron-parser": "^4.9.0",
+    "drizzle-orm": "^0.36.4",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.10.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@xyflow/react": "^12.3.6",
+    "autoprefixer": "^10.4.20",
+    "clsx": "^2.1.1",
+    "drizzle-kit": "^0.28.1",
+    "electron": "^32.2.7",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "monaco-editor": "^0.52.2",
+    "postcss": "^8.4.49",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8",
+    "zustand": "^5.0.2"
+  },
+  "build": {
+    "appId": "dev.agentorchestrator.app",
+    "productName": "Agent Orchestrator",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*",
+      "drizzle/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ]
+    }
+  }
+}

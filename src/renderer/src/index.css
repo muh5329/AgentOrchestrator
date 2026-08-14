@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-base-900 text-ink font-sans text-base antialiased;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    @apply bg-accent-soft text-ink;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-base-650 rounded-full border-2 border-solid;
+    border-color: transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-base-600;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply bg-base-800 border border-edge rounded px-2 py-1.5 text-base text-ink outline-none;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply border-accent;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-ink-faint;
+  }
+  label {
+    @apply text-xs uppercase tracking-wider text-ink-faint;
+  }
+}
+
+@layer components {
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  .panel {
+    @apply bg-base-850 border border-edge rounded-lg;
+  }
+
+  .row-hover {
+    @apply hover:bg-base-800/70 transition-colors;
+  }
+
+  .mono {
+    @apply font-mono text-sm;
+  }
+
+  .scroll-y {
+    @apply overflow-y-auto overflow-x-hidden;
+  }
+}
+
+/* React Flow theming */
+.react-flow__background {
+  background-color: #08090b;
+}
+.react-flow__edge-path {
+  stroke: #333c4d;
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #5b8cff;
+}
+.react-flow__handle {
+  opacity: 0;
+}
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__controls {
+  box-shadow: none;
+  border: 1px solid #232936;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: #101318;
+  border-bottom: 1px solid #232936;
+  fill: #98a1b3;
+  width: 22px;
+  height: 22px;
+}
+.react-flow__controls-button:hover {
+  background: #1a1f2a;
+  fill: #e6e9ef;
+}
+.react-flow__minimap {
+  border-radius: 6px;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(91, 140, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(91, 140, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(91, 140, 255, 0);
+  }
+}
+.running-pulse {
+  animation: pulse-ring 1.8s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
