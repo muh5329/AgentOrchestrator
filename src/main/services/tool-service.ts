@@ -157,6 +157,28 @@ export class ToolService {
     return out
   }
 
+  /**
+   * The same list, annotated with the two things the interface needs and a row
+   * on its own cannot say: whether calling it will stop for a human, and whether
+   * this agent can reach it at all.
+   *
+   * `dangerous` lives on the built-in definition rather than in the table, and
+   * holding a toolkit is not the same as holding the permissions its tools
+   * require - an agent can own a toolkit whose tools it may never call.
+   */
+  toolsForAgentDetailed(agentId: string): Array<ToolRow & { dangerous: boolean; reachable: boolean }> {
+    const agent = this.ctx.agents.get(agentId)
+    const settings = this.ctx.projects.settings(agent.projectId)
+
+    return this.toolsForAgent(agentId).map((tool) => ({
+      ...tool,
+      dangerous:
+        (findBuiltinTool(tool.name)?.dangerous ?? false) ||
+        tool.requiredPermissions.some((p) => settings.requireApprovalFor.includes(p)),
+      reachable: tool.requiredPermissions.every((p) => agent.permissions.includes(p))
+    }))
+  }
+
   /** Name lookup across the agent's granted tools, used at call time. */
   findToolForAgent(agentId: string, name: string): ToolRow | undefined {
     if (CORE_TOOL_NAMES.includes(name)) {

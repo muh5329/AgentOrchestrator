@@ -1,11 +1,26 @@
 # Agent Orchestrator
 
-A desktop environment for building, running, judging and recursively orchestrating fleets of AI
-agents. Projects contain agents; agents hold tools, permissions and memory; agents create tasks,
-create other agents, invoke each other, and schedule their own work. An independent Judge decides
-whether any of it is actually finished.
+Agent Orchestrator is a local-first desktop environment for building, running, judging, and
+recursively coordinating fleets of AI agents. It gives each project a real execution loop: agents
+work with tools and permissions, delegate tasks to one another, persist memory, and run on schedules
+or workflows while a built-in Judge evaluates the outcomes against acceptance criteria.
 
-Everything is local: SQLite on disk, no proprietary backend, no telemetry.
+![Agent Orchestrator overview](screenshots/agent-document_1.png)
+
+This is not a single chat window with a few commands bolted on. It is a workspace for autonomous
+software work where the system can plan, execute, review, revise, and escalate without hiding the
+state in a black box. Everything remains local: SQLite on disk, no proprietary backend, and no
+telemetry.
+
+## Why teams use it
+
+- Multi-agent orchestration with bounded recursion and permissions
+- Real project execution that tracks tasks, tool calls, file changes, and verdicts
+- Human approval gates for irreversible actions and risky tooling
+- Workflow-driven automation for event-driven or scheduled work
+- Workspace isolation with per-agent worktrees and reviewable diffs
+
+See the full [screenshot gallery](./screenshots/README.md) for the main UI surfaces.
 
 ## Running it
 
@@ -213,11 +228,7 @@ captures each surface to `.shots/`, which is how the UI gets reviewed rather tha
 
 ## Screenshots
 
-Example screenshots of the app (captured from the running Electron renderer):
-
-![Dashboard](screenshots/dashboard.png)
-![Graph](screenshots/graph.png)
-![Tasks](screenshots/tasks.png)
+Browse the complete UI gallery in [screenshots/README.md](./screenshots/README.md).
 
 ## Keyboard
 
@@ -236,4 +247,3 @@ Kept honest rather than stubbed:
   the workflow itself; use a schedule whose task runs the workflow, or an event trigger.
 - Only the macOS packaging target is configured. `electron-builder` needs a `win`/`linux` block and
   icons before it will produce anything for those.
-# AgentOrchestrator

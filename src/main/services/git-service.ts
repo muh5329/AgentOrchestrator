@@ -75,7 +75,11 @@ export class GitService {
       return { isRepo: false, branch: null, ahead: 0, behind: 0, clean: true, entries: [], root: null }
     }
 
-    const raw = (await this.tryGit(dir, ['status', '--porcelain=v1', '--branch'])) ?? ''
+    // `-uall` rather than git's default: an agent that creates a directory would
+    // otherwise show up as a single collapsed `src/` row, which names no file
+    // and therefore has no diff to review. We want every file it wrote.
+    const raw =
+      (await this.tryGit(dir, ['status', '--porcelain=v1', '--branch', '-uall'])) ?? ''
     const lines = raw.split('\n').filter(Boolean)
 
     let branch: string | null = null

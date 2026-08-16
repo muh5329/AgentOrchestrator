@@ -23,6 +23,7 @@ import type { WorkflowService } from '../services/workflow-service'
 import type { WorkflowEngine } from '../engines/workflow-engine'
 import type { GitService } from '../services/git-service'
 import type { WorkspaceService } from '../services/workspace-service'
+import type { FleetService } from '../services/fleet-service'
 import type { ControlServer } from '../runtime/mcp/control-server'
 
 export interface AppPaths {
@@ -60,5 +61,6 @@ export interface AppContext {
   workflowEngine: WorkflowEngine
   git: GitService
   workspace: WorkspaceService
+  fleet: FleetService
   control: ControlServer
 }

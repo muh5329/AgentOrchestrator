@@ -6,6 +6,7 @@ import type {
   Artifact,
   Evaluation,
   Execution,
+  FleetOverview,
   Memory,
   Message,
   Project,
@@ -51,6 +52,9 @@ export const api = {
     pause: (projectId: string) => invoke<{ ok: true }>('projects.pause', { projectId }),
     resume: (projectId: string) => invoke<{ ok: true }>('projects.resume', { projectId }),
     templates: () => invoke<ProjectTemplateInfo[]>('projects.templates')
+  },
+  fleet: {
+    overview: () => invoke<FleetOverview>('fleet.overview')
   },
   agents: {
     list: (projectId: string) => invoke<Agent[]>('agents.list', { projectId }),

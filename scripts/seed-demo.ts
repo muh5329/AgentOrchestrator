@@ -454,6 +454,48 @@ async function main(): Promise<void> {
     ]
   })
 
+  // A purely mechanical workflow, so a live UI run needs no model at all.
+  const smoke = app.ctx.workflows.create({
+    projectId: project.id,
+    name: 'Pipeline smoke test',
+    description: 'Mechanical steps only - proves the engine end to end without a provider.',
+    trigger: 'manual'
+  })
+  const s = (key: string): string => `wfn_smoke_${key}`
+  app.ctx.workflows.saveGraph({
+    workflowId: smoke.id,
+    nodes: [
+      { id: s('start'), kind: 'start', label: 'Start', config: {}, x: 300, y: 40 },
+      { id: s('fork'), kind: 'parallel', label: 'Check both feeds', config: {}, x: 300, y: 150 },
+      { id: s('a'), kind: 'delay', label: 'Probe raw feed', config: { ms: 120 }, x: 120, y: 260 },
+      { id: s('b'), kind: 'delay', label: 'Probe clean feed', config: { ms: 120 }, x: 480, y: 260 },
+      { id: s('join'), kind: 'merge', label: 'Both done', config: {}, x: 300, y: 370 },
+      {
+        id: s('check'),
+        kind: 'condition',
+        label: 'Within budget?',
+        config: { expression: 'true', saveAs: 'withinBudget' },
+        x: 300,
+        y: 480
+      },
+      { id: s('ok'), kind: 'delay', label: 'Record healthy', config: { ms: 60 }, x: 120, y: 590 },
+      { id: s('alert'), kind: 'delay', label: 'Raise alert', config: { ms: 60 }, x: 480, y: 590 },
+      { id: s('end'), kind: 'end', label: 'End', config: {}, x: 300, y: 700 }
+    ],
+    edges: [
+      { id: 'wfe_smoke_1', fromNodeId: s('start'), toNodeId: s('fork') },
+      { id: 'wfe_smoke_2', fromNodeId: s('fork'), toNodeId: s('a') },
+      { id: 'wfe_smoke_3', fromNodeId: s('fork'), toNodeId: s('b') },
+      { id: 'wfe_smoke_4', fromNodeId: s('a'), toNodeId: s('join') },
+      { id: 'wfe_smoke_5', fromNodeId: s('b'), toNodeId: s('join') },
+      { id: 'wfe_smoke_6', fromNodeId: s('join'), toNodeId: s('check') },
+      { id: 'wfe_smoke_7', fromNodeId: s('check'), toNodeId: s('ok'), label: 'true' },
+      { id: 'wfe_smoke_8', fromNodeId: s('check'), toNodeId: s('alert'), label: 'false' },
+      { id: 'wfe_smoke_9', fromNodeId: s('ok'), toNodeId: s('end') },
+      { id: 'wfe_smoke_10', fromNodeId: s('alert'), toNodeId: s('end') }
+    ]
+  })
+
   const stats = app.ctx.projects.stats(project.id)
   console.log(
     `seeded ${target}: ${stats.agents} agents, ${stats.tasksTotal} tasks, ` +

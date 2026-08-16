@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react'
-import clsx from 'clsx'
-import { useStore, type ViewId } from './store'
-import { api } from './api'
+import { useStore, type DocTab } from './store'
 import { Badge, Button, EmptyState, Kbd, StatusDot, formatCost } from './ui'
 import { CommandPalette } from './components/CommandPalette'
-import { ActivityDock } from './components/ActivityDock'
 import { NewProjectModal } from './components/NewProject'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Dashboard } from './views/Dashboard'
+import { ProjectRail } from './components/ProjectRail'
+import { TeamChat } from './components/TeamChat'
+import { AttentionBar } from './components/AttentionBar'
+import { SessionsRail } from './components/SessionsRail'
+import { ToolkitPanel } from './components/ToolkitPanel'
+import { Terminal } from './components/Terminal'
+import { DocTabs } from './components/DocTabs'
+import { Resizer } from './components/Resizer'
+import { ProjectReport } from './views/ProjectReport'
+import { AgentDoc } from './views/AgentDoc'
 import { AgentsView } from './views/Agents'
 import { GraphView } from './views/Graph'
 import { TasksView } from './views/Tasks'
@@ -16,22 +22,27 @@ import { WorkflowsView } from './views/Workflows'
 import { WorkspaceView } from './views/Workspace'
 import { MemoryView } from './views/Memory'
 import { SettingsView } from './views/Settings'
+import { Dashboard } from './views/Dashboard'
 
-const NAV: Array<{ id: ViewId; label: string; glyph: string }> = [
-  { id: 'dashboard', label: 'Dashboard', glyph: '◱' },
-  { id: 'agents', label: 'Agents', glyph: '◈' },
-  { id: 'graph', label: 'Graph', glyph: '⌗' },
-  { id: 'tasks', label: 'Tasks', glyph: '☰' },
-  { id: 'workflows', label: 'Workflows', glyph: '⑂' },
-  { id: 'automation', label: 'Automation', glyph: '⟳' },
-  { id: 'workspace', label: 'Workspace', glyph: '⌘' },
-  { id: 'memory', label: 'Memory', glyph: '❖' },
-  { id: 'settings', label: 'Settings', glyph: '⚙' }
-]
-
+/**
+ * The workbench.
+ *
+ *   projects │ document       │ sessions
+ *            │ ─────────────  │ ────────
+ *   chat     │ terminal       │ toolkit
+ *
+ * Three columns rather than a navigation rail and one big pane. The left column
+ * answers "what am I working on", the centre "what is it doing", the right "who
+ * is doing it" - and the two docked panes are the things you keep reaching for
+ * while reading the middle: a shell, and the selected agent's actual reach.
+ */
 export default function App(): React.JSX.Element {
   const store = useStore()
   const [newProjectOpen, setNewProjectOpen] = useState(false)
+  const [leftWidth, setLeftWidth] = useState(236)
+  const [rightWidth, setRightWidth] = useState(320)
+  const [terminalHeight, setTerminalHeight] = useState(200)
+  const [toolkitHeight, setToolkitHeight] = useState(260)
 
   useEffect(() => {
     void store.init()
@@ -46,11 +57,15 @@ export default function App(): React.JSX.Element {
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
         e.preventDefault()
-        store.setDock(!store.dockOpen)
+        store.setTerminal(!store.terminalOpen)
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'n') {
         e.preventDefault()
         setNewProjectOpen(true)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'w' && store.activeTabId) {
+        e.preventDefault()
+        store.closeTab(store.activeTabId)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -67,15 +82,13 @@ export default function App(): React.JSX.Element {
   }, [store])
 
   const project = store.projects.find((p) => p.id === store.activeProjectId) ?? null
-  const runningAgents = store.agents.filter((a) => a.status === 'RUNNING').length
+  const runningAgents = store.fleet.agents.filter((a) => a.status === 'RUNNING').length
+  const activeTab = store.tabs.find((t) => t.id === store.activeTabId) ?? null
 
   return (
     <div className="flex h-full w-full flex-col bg-base-900 text-ink">
-      {/* Title bar */}
       <header className="drag-region flex h-11 shrink-0 items-center gap-3 border-b border-edge bg-base-850 pl-20 pr-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold tracking-tight">Agent Orchestrator</span>
-        </div>
+        <span className="text-sm font-semibold tracking-tight">Agent Orchestrator</span>
 
         {project && (
           <>
@@ -101,12 +114,9 @@ export default function App(): React.JSX.Element {
 
         <div className="no-drag flex items-center gap-3 text-xs text-ink-faint">
           {store.approvals.length > 0 && (
-            <button
-              className="flex items-center gap-1 text-warn hover:text-warn/80"
-              onClick={() => store.setDock(true, 'approvals')}
-            >
+            <span className="flex items-center gap-1 text-warn">
               ⚠ {store.approvals.length} awaiting approval
-            </button>
+            </span>
           )}
           <span className="flex items-center gap-1.5">
             <StatusDot status={runningAgents ? 'RUNNING' : 'IDLE'} />
@@ -123,96 +133,24 @@ export default function App(): React.JSX.Element {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        {/* Sidebar */}
-        <aside className="flex w-56 shrink-0 flex-col border-r border-edge bg-base-850">
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-2xs uppercase tracking-wider text-ink-faint">Projects</span>
-            <Button size="sm" variant="ghost" onClick={() => setNewProjectOpen(true)} title="New project (⌘N)">
-              ＋
-            </Button>
+        {/* Left: projects, chat, attention */}
+        <aside
+          data-pane="projects"
+          className="flex shrink-0 flex-col border-r border-edge bg-base-850"
+          style={{ width: leftWidth }}
+        >
+          <div className="min-h-0 flex-1">
+            <ProjectRail onNewProject={() => setNewProjectOpen(true)} />
           </div>
-
-          <div className="scroll-y max-h-56 border-b border-edge px-1.5 pb-2">
-            {store.projects.length === 0 && (
-              <p className="px-2 py-3 text-xs text-ink-faint">No projects yet.</p>
-            )}
-            {store.projects.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => void store.selectProject(p.id)}
-                className={clsx(
-                  'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm row-hover',
-                  p.id === store.activeProjectId ? 'bg-base-750 text-ink' : 'text-ink-dim'
-                )}
-              >
-                <StatusDot status={p.status === 'ACTIVE' ? 'RUNNING' : p.status} />
-                <span className="truncate">{p.name}</span>
-              </button>
-            ))}
-          </div>
-
-          <nav className="flex flex-col gap-0.5 p-1.5">
-            {NAV.map((item) => (
-              <button
-                key={item.id}
-                disabled={!project}
-                onClick={() => store.setView(item.id)}
-                className={clsx(
-                  'flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm row-hover disabled:opacity-30',
-                  store.view === item.id ? 'bg-base-750 text-ink' : 'text-ink-dim'
-                )}
-              >
-                <span className="w-4 text-center text-ink-faint">{item.glyph}</span>
-                {item.label}
-                {item.id === 'tasks' && store.stats?.pendingReviews ? (
-                  <span className="ml-auto text-2xs text-magic">{store.stats.pendingReviews}</span>
-                ) : null}
-              </button>
-            ))}
-          </nav>
-
-          <div className="flex-1" />
-
-          {project && (
-            <div className="border-t border-edge p-2">
-              <div className="flex gap-1.5">
-                {project.status === 'ACTIVE' ? (
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => void api.projects.pause(project.id).then(() => store.refreshProjects())}
-                  >
-                    Pause
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    className="flex-1"
-                    onClick={async () => {
-                      if (project.status === 'DRAFT') await api.projects.launch(project.id)
-                      else await api.projects.resume(project.id)
-                      await store.refreshProjects()
-                      await store.refreshProject()
-                    }}
-                  >
-                    {project.status === 'DRAFT'
-                      ? 'Launch'
-                      : project.status === 'COMPLETED'
-                        ? 'Reopen'
-                        : project.status === 'REVIEW'
-                          ? 'Continue'
-                          : 'Resume'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
+          <TeamChat />
+          <AttentionBar />
         </aside>
 
-        {/* Main */}
+        <Resizer direction="col" value={leftWidth} min={180} max={420} onResize={setLeftWidth} />
+
+        {/* Centre: document, tabs, terminal */}
         <main className="flex min-w-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-hidden">
+          <div data-pane="document" className="min-h-0 flex-1 overflow-hidden bg-base-900">
             {!store.ready ? (
               <EmptyState title="Starting up…" />
             ) : !project ? (
@@ -225,21 +163,85 @@ export default function App(): React.JSX.Element {
                   </Button>
                 }
               />
+            ) : !activeTab ? (
+              <EmptyState
+                title="Nothing open"
+                detail="Pick something from the project on the left, or an agent on the right."
+              />
             ) : (
-              <ErrorBoundary key={store.view}>
-                <ViewRouter view={store.view} />
+              <ErrorBoundary key={activeTab.id}>
+                <TabPane tab={activeTab} />
               </ErrorBoundary>
             )}
           </div>
 
-          {project && <ActivityDock />}
+          {project && <DocTabs />}
+
+          {project && store.terminalOpen && (
+            <>
+              <Resizer
+                direction="row"
+                value={terminalHeight}
+                min={80}
+                max={560}
+                invert
+                onResize={setTerminalHeight}
+              />
+              <div
+                data-pane="terminal"
+                className="shrink-0 border-t border-edge"
+                style={{ height: terminalHeight }}
+              >
+                <Terminal projectId={project.id} />
+              </div>
+            </>
+          )}
+
+          {project && !store.terminalOpen && (
+            <button
+              className="flex h-6 shrink-0 items-center gap-2 border-t border-edge bg-base-850 px-3 text-2xs uppercase tracking-wider text-ink-faint hover:text-ink-dim"
+              onClick={() => store.setTerminal(true)}
+            >
+              Terminal <Kbd>⌘J</Kbd>
+            </button>
+          )}
         </main>
+
+        <Resizer
+          direction="col"
+          value={rightWidth}
+          min={240}
+          max={520}
+          invert
+          onResize={setRightWidth}
+        />
+
+        {/* Right: sessions and the selected agent's toolkit */}
+        <aside
+          className="flex shrink-0 flex-col border-l border-edge bg-base-850"
+          style={{ width: rightWidth }}
+        >
+          <div data-pane="sessions" className="min-h-0 flex-1">
+            <SessionsRail />
+          </div>
+          <Resizer
+            direction="row"
+            value={toolkitHeight}
+            min={38}
+            max={620}
+            invert
+            onResize={setToolkitHeight}
+          />
+          <div data-pane="toolkit" className="shrink-0" style={{ height: toolkitHeight }}>
+            <ToolkitPanel />
+          </div>
+        </aside>
       </div>
 
       {store.error && (
-        <div className="border-t border-bad/40 bg-bad/10 px-3 py-1.5 text-xs text-bad">
-          {store.error}
-          <button className="ml-2 underline" onClick={() => useStore.setState({ error: null })}>
+        <div className="flex shrink-0 items-center gap-2 border-t border-bad/40 bg-bad/10 px-3 py-1.5 text-xs text-bad">
+          <span className="flex-1">{store.error}</span>
+          <button className="underline" onClick={() => useStore.setState({ error: null })}>
             dismiss
           </button>
         </div>
@@ -251,8 +253,11 @@ export default function App(): React.JSX.Element {
   )
 }
 
-function ViewRouter({ view }: { view: ViewId }): React.JSX.Element {
-  switch (view) {
+function TabPane({ tab }: { tab: DocTab }): React.JSX.Element {
+  if (tab.kind === 'report') return <ProjectReport projectId={tab.projectId} />
+  if (tab.kind === 'agent') return <AgentDoc agentId={tab.agentId} />
+
+  switch (tab.view) {
     case 'agents':
       return <AgentsView />
     case 'graph':

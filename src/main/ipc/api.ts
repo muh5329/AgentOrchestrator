@@ -39,6 +39,9 @@ export function createApi(ctx: AppContext): Record<string, (payload: Payload) =>
     },
     'projects.templates': () => ctx.orchestrator.templates(),
 
+    /* ------------------------------- fleet ----------------------------- */
+    'fleet.overview': () => ctx.fleet.overview(),
+
     /* ------------------------------ agents ----------------------------- */
     'agents.list': (p) => ctx.agents.list(p.projectId),
     'agents.get': (p) => ctx.agents.get(p.agentId),
@@ -176,7 +179,7 @@ export function createApi(ctx: AppContext): Record<string, (payload: Payload) =>
     /* ------------------------------ tools ------------------------------ */
     'tools.toolkits': (p) => ctx.tools.listToolkits(p.projectId),
     'tools.list': (p) => ctx.tools.listTools(p.toolkitId),
-    'tools.forAgent': (p) => ctx.tools.toolsForAgent(p.agentId),
+    'tools.forAgent': (p) => ctx.tools.toolsForAgentDetailed(p.agentId),
     'tools.create': (p) => ctx.tools.createCustomTool(p as never),
     'tools.update': (p) => ctx.tools.updateTool(p.toolId, p.patch),
     'tools.delete': (p) => {

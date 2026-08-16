@@ -6,6 +6,7 @@ import type {
   AppEventRecord,
   Approval,
   Evaluation,
+  FleetOverview,
   Memory,
   Message,
   Project,
@@ -26,6 +27,24 @@ export type ViewId =
   | 'memory'
   | 'settings'
 
+/**
+ * The centre column is a document area, so what it shows is a list of open tabs
+ * rather than a single current view. A tab's id is derived from what it points
+ * at, which is what makes opening the same thing twice a no-op.
+ */
+export type DocTabSpec =
+  | { kind: 'report'; projectId: string; title: string }
+  | { kind: 'agent'; projectId: string; agentId: string; title: string }
+  | { kind: 'view'; projectId: string; view: ViewId; title: string }
+
+export type DocTab = DocTabSpec & { id: string }
+
+export function tabId(tab: DocTabSpec): string {
+  if (tab.kind === 'agent') return `agent:${tab.agentId}`
+  if (tab.kind === 'view') return `view:${tab.projectId}:${tab.view}`
+  return `report:${tab.projectId}`
+}
+
 interface State {
   ready: boolean
   error: string | null
@@ -45,7 +64,13 @@ interface State {
   evaluations: Evaluation[]
   providers: ProviderInfo[]
 
+  /** Every agent in every project - the sessions rail is not project-scoped. */
+  fleet: FleetOverview
+
   view: ViewId
+  tabs: DocTab[]
+  activeTabId: string | null
+  terminalOpen: boolean
   selectedAgentId: string | null
   selectedTaskId: string | null
   paletteOpen: boolean
@@ -57,7 +82,12 @@ interface State {
   refreshProjects(): Promise<void>
   refreshProject(): Promise<void>
   refreshApprovals(): Promise<void>
+  refreshFleet(): Promise<void>
   setView(view: ViewId): void
+  openTab(tab: DocTabSpec): void
+  closeTab(id: string): void
+  activateTab(id: string): void
+  setTerminal(open: boolean): void
   selectAgent(agentId: string | null): void
   selectTask(taskId: string | null): void
   setPalette(open: boolean): void
@@ -69,15 +99,30 @@ const EMPTY_GRAPH: AgentGraph = { nodes: [], edges: [] }
 const EVENT_BUFFER = 400
 
 /** Which slices a given event type invalidates. */
-function slicesFor(type: string): Array<'agents' | 'tasks' | 'graph' | 'stats' | 'approvals' | 'schedules' | 'messages' | 'evaluations' | 'projects'> {
-  if (type.startsWith('AGENT_')) return ['agents', 'graph', 'stats']
-  if (type.startsWith('TASK_')) return ['tasks', 'stats', 'graph']
-  if (type.startsWith('EXECUTION_')) return ['stats', 'agents', 'tasks']
-  if (type.startsWith('JUDGE_')) return ['tasks', 'stats', 'evaluations']
+type Slice =
+  | 'agents'
+  | 'tasks'
+  | 'graph'
+  | 'stats'
+  | 'approvals'
+  | 'schedules'
+  | 'messages'
+  | 'evaluations'
+  | 'projects'
+  | 'fleet'
+
+function slicesFor(type: string): Slice[] {
+  // Exact matches first. `AGENT_MESSAGE` is not an agent-lifecycle event, and
+  // being caught by the `AGENT_` prefix below meant a message never refreshed
+  // the thread - it only appeared after something else happened to reload it.
+  if (type === 'AGENT_MESSAGE') return ['messages']
+  if (type.startsWith('AGENT_')) return ['agents', 'graph', 'stats', 'fleet']
+  if (type.startsWith('TASK_')) return ['tasks', 'stats', 'graph', 'fleet']
+  if (type.startsWith('EXECUTION_')) return ['stats', 'agents', 'tasks', 'fleet']
+  if (type.startsWith('JUDGE_')) return ['tasks', 'stats', 'evaluations', 'fleet']
   if (type.startsWith('APPROVAL_')) return ['approvals']
   if (type.startsWith('SCHEDULE_')) return ['schedules', 'tasks']
-  if (type === 'AGENT_MESSAGE') return ['messages']
-  if (type.startsWith('PROJECT_')) return ['projects', 'stats']
+  if (type.startsWith('PROJECT_')) return ['projects', 'stats', 'fleet']
   if (type.startsWith('WATCHDOG_')) return ['approvals', 'tasks']
   if (type.startsWith('BUDGET_')) return ['stats']
   return []
@@ -92,36 +137,45 @@ export const useStore = create<State>((set, get) => {
     const slices = [...pending]
     pending = new Set()
     timer = null
-    if (!projectId) return
+
+    // `fleet` and `projects` span every project, so they still refresh when
+    // nothing is selected - the sessions rail has to stay live regardless.
+    if (!projectId && !slices.includes('fleet') && !slices.includes('projects')) return
 
     try {
       const patch: Partial<State> = {}
       await Promise.all(
         slices.map(async (slice) => {
+          if (slice !== 'fleet' && slice !== 'projects' && !projectId) return
+          // Narrowed for the project-scoped branches below.
+          const pid = projectId as string
           switch (slice) {
+            case 'fleet':
+              patch.fleet = await api.fleet.overview()
+              break
             case 'agents':
-              patch.agents = await api.agents.list(projectId)
+              patch.agents = await api.agents.list(pid)
               break
             case 'tasks':
-              patch.tasks = await api.tasks.list(projectId)
+              patch.tasks = await api.tasks.list(pid)
               break
             case 'graph':
-              patch.graph = await api.agents.graph(projectId)
+              patch.graph = await api.agents.graph(pid)
               break
             case 'stats':
-              patch.stats = await api.projects.stats(projectId)
+              patch.stats = await api.projects.stats(pid)
               break
             case 'approvals':
-              patch.approvals = await api.approvals.pending(projectId)
+              patch.approvals = await api.approvals.pending(pid)
               break
             case 'schedules':
-              patch.schedules = await api.schedules.list(projectId)
+              patch.schedules = await api.schedules.list(pid)
               break
             case 'messages':
-              patch.messages = await api.messages.list(projectId)
+              patch.messages = await api.messages.list(pid)
               break
             case 'evaluations':
-              patch.evaluations = await api.evaluations.byProject(projectId)
+              patch.evaluations = await api.evaluations.byProject(pid)
               break
             case 'projects':
               patch.projects = await api.projects.list()
@@ -157,20 +211,25 @@ export const useStore = create<State>((set, get) => {
     memories: [],
     evaluations: [],
     providers: [],
+    fleet: { projects: [], agents: [] },
     view: 'dashboard',
+    tabs: [],
+    activeTabId: null,
+    terminalOpen: true,
     selectedAgentId: null,
     selectedTaskId: null,
     paletteOpen: false,
-    dockOpen: true,
+    dockOpen: false,
     dockTab: 'activity',
 
     async init() {
       try {
-        const [projects, providers] = await Promise.all([
+        const [projects, providers, fleet] = await Promise.all([
           api.projects.list(),
-          api.providers.list()
+          api.providers.list(),
+          api.fleet.overview()
         ])
-        set({ projects, providers, ready: true })
+        set({ projects, providers, fleet, ready: true })
         if (projects.length) await get().selectProject(projects[0].id)
 
         window.ao.onEvent((raw) => {
@@ -178,11 +237,15 @@ export const useStore = create<State>((set, get) => {
           if (!event?.type) return
           get().pushEvent(event)
           const active = get().activeProjectId
+          const slices = slicesFor(event.type)
           if (event.projectId && active && event.projectId !== active) {
-            if (event.type.startsWith('PROJECT_')) schedule(['projects'])
+            // Another project's event: the project-scoped slices are not ours to
+            // refresh, but the sessions rail spans the whole fleet and would go
+            // stale if we dropped these entirely.
+            schedule(slices.filter((s) => s === 'fleet' || s === 'projects'))
             return
           }
-          schedule(slicesFor(event.type))
+          schedule(slices)
         })
 
         // Provider availability is probed on a slower cadence.
@@ -203,6 +266,25 @@ export const useStore = create<State>((set, get) => {
         stats: null
       })
       if (!projectId) return
+
+      // Every project opens on its report, and tabs from other projects are not
+      // carried over - a tab pointing at a project you are no longer in would
+      // render against state the store has already dropped.
+      const report: DocTab = {
+        id: tabId({ kind: 'report', projectId, title: '' }),
+        kind: 'report',
+        projectId,
+        title: 'Report'
+      }
+      set((state) => {
+        const kept = state.tabs.filter((t) => t.projectId === projectId)
+        const tabs = kept.some((t) => t.id === report.id) ? kept : [report, ...kept]
+        return {
+          tabs,
+          activeTabId: kept.some((t) => t.id === state.activeTabId) ? state.activeTabId : report.id
+        }
+      })
+
       await get().refreshProject()
     },
 
@@ -239,7 +321,40 @@ export const useStore = create<State>((set, get) => {
       set({ approvals: await api.approvals.pending(projectId) })
     },
 
+    async refreshFleet() {
+      try {
+        set({ fleet: await api.fleet.overview() })
+      } catch (err) {
+        set({ error: (err as Error).message })
+      }
+    },
+
     setView: (view) => set({ view }),
+
+    openTab: (tab) => {
+      const id = tabId(tab)
+      set((state) => ({
+        tabs: state.tabs.some((t) => t.id === id)
+          ? state.tabs
+          : [...state.tabs, { ...tab, id } as DocTab],
+        activeTabId: id
+      }))
+    },
+
+    closeTab: (id) =>
+      set((state) => {
+        const index = state.tabs.findIndex((t) => t.id === id)
+        if (index === -1) return {}
+        const tabs = state.tabs.filter((t) => t.id !== id)
+        if (state.activeTabId !== id) return { tabs }
+        // Fall back to the neighbour on the left, the way editors do.
+        const next = tabs[Math.max(0, index - 1)] ?? null
+        return { tabs, activeTabId: next?.id ?? null }
+      }),
+
+    activateTab: (activeTabId) => set({ activeTabId }),
+    setTerminal: (terminalOpen) => set({ terminalOpen }),
+
     selectAgent: (selectedAgentId) => set({ selectedAgentId }),
     selectTask: (selectedTaskId) => set({ selectedTaskId }),
     setPalette: (paletteOpen) => set({ paletteOpen }),

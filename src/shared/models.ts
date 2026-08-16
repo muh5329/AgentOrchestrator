@@ -265,6 +265,10 @@ export interface Tool {
   timeoutMs: number
   isBuiltIn: boolean
   enabled: boolean
+  /** Calling this stops for a human, either by nature or by project policy. */
+  dangerous?: boolean
+  /** False when the agent holds the toolkit but not the permissions it needs. */
+  reachable?: boolean
 }
 
 export interface Artifact {
@@ -431,4 +435,34 @@ export interface ConsoleSession {
   running: boolean
   exitCode: number | null
   startedAt: number
+}
+
+/* ------------------------------------------------------------------ */
+/* Fleet - every agent in every project, for the sessions rail          */
+/* ------------------------------------------------------------------ */
+
+export interface FleetProject extends Project {
+  agentCount: number
+  openTasks: number
+  runningTasks: number
+  completedTasks: number
+  totalTasks: number
+  costUsd: number
+}
+
+export interface FleetAgent extends Agent {
+  openTasks: number
+  runningTasks: number
+  completedTasks: number
+  totalTasks: number
+  lastScore: number | null
+  costUsd: number
+  tokens: number
+  /** The agent's own git branch, when the project isolates workspaces. */
+  branch: string | null
+}
+
+export interface FleetOverview {
+  projects: FleetProject[]
+  agents: FleetAgent[]
 }

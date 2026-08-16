@@ -136,3 +136,41 @@
 .running-pulse {
   animation: pulse-ring 1.8s cubic-bezier(0.66, 0, 0, 1) infinite;
 }
+
+/* The avatar ring is an SVG stroke, so it fades rather than casting a shadow. */
+@keyframes avatar-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.avatar-pulse {
+  animation: avatar-pulse 1.6s ease-in-out infinite;
+}
+
+/* Workbench column dividers, dragged to resize. */
+.col-resizer {
+  width: 4px;
+  cursor: col-resize;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.col-resizer:hover,
+.col-resizer[data-dragging='true'] {
+  background: #333c4d;
+}
+.row-resizer {
+  height: 4px;
+  cursor: row-resize;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.row-resizer:hover,
+.row-resizer[data-dragging='true'] {
+  background: #333c4d;
+}
