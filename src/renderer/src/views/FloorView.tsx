@@ -1,17 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import { useStore } from '../store'
-import { FLOOR, ROOMS, ROOM_BY_ID } from '../floor/layout'
+import { FLOOR, ROOMS, ROOM_BY_ID, SEAT_OFFSET } from '../floor/layout'
+import { DECOR } from '../floor/decor'
 import {
   PALETTE,
+  drawBench,
   drawBoard,
   drawBubble,
-  drawDesk,
-  drawFloor,
+  drawBuilding,
+  drawMissionBoard,
   drawNamePlate,
+  drawProp,
   drawRobot,
-  drawRoom,
-  roundRect
+  drawRoom
 } from '../floor/sprites'
 import { FloorSim, speechFor, speechForMessage } from '../floor/sim'
 import { RobotAvatar } from '../components/RobotAvatar'
@@ -94,8 +96,23 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
     ]
   }, [store.tasks])
 
+  /** What the wall screen in Mission Control shows: all of it real. */
+  const mission = useMemo(() => {
+    const lines = store.events
+      .slice(0, 14)
+      .map((event) => `${event.type.toLowerCase().replace(/_/g, ' ')} ${event.message}`)
+    return {
+      bars: columns.map((c) => ({ value: c.count, color: c.color })),
+      progress: store.stats?.progress ?? 0,
+      lines: lines.length ? lines : ['awaiting work']
+    }
+  }, [columns, store.events, store.stats])
+
   const columnsRef = useRef(columns)
   columnsRef.current = columns
+  const missionRef = useRef(mission)
+  missionRef.current = mission
+  const hoveredRoomRef = useRef<string | null>(null)
   const selectedRef = useRef(store.selectedAgentId)
   selectedRef.current = store.selectedAgentId
   const playingRef = useRef(playing)
@@ -139,7 +156,7 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
       const height = canvas.height / dpr
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.fillStyle = PALETTE.wall
+      ctx.fillStyle = PALETTE.shellOuter
       ctx.fillRect(0, 0, width, height)
 
       // Fit to the whole pane rather than to the gap between the overlays.
@@ -166,39 +183,34 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
       ctx.translate(ox, oy)
       ctx.scale(scale, scale)
 
-      drawFloor(ctx, FLOOR)
+      drawBuilding(ctx, FLOOR)
 
+      // Rooms, then their furniture, then the two feature installations.
       for (const room of ROOMS) {
         if (room.w === 0) continue
-        drawRoom(ctx, room, false)
+        drawRoom(ctx, room, DECOR[room.id].door, hoveredRoomRef.current === room.id)
+        for (const prop of DECOR[room.id].props) drawProp(ctx, room.x, room.y, prop)
       }
+
+      const mission = ROOM_BY_ID.get('mission')
+      if (mission) drawMissionBoard(ctx, mission, missionRef.current, now / 1000)
 
       const board = ROOM_BY_ID.get('board')
       if (board) drawBoard(ctx, board, columnsRef.current)
 
-      // Archive shelves, filled in proportion to what the fleet has learned.
-      const archive = ROOM_BY_ID.get('archive')
-      if (archive) {
-        const shelves = Math.min(12, memoryCountRef.current)
-        for (let i = 0; i < 12; i++) {
-          ctx.fillStyle = i < shelves ? '#5b4a3b' : '#241f1a'
-          roundRect(ctx, archive.x + 3 + (i % 4) * 3.6, archive.y + 4 + Math.floor(i / 4) * 3, 3, 2.2, 0.3)
-          ctx.fill()
-        }
-      }
-
-      // Desks first, so robots sit in front of them.
+      // Benches, with a seat lit when the agent sitting there is running.
+      const actorList = [...simRef.current.actors.values()]
       for (const room of ROOMS) {
-        room.desks.forEach((desk, i) => {
-          const busy = [...simRef.current.actors.values()].some(
+        if (!room.desks.length) continue
+        const lit = room.desks.map((desk) =>
+          actorList.some(
             (a) =>
-              a.room === room.id &&
               a.status === 'RUNNING' &&
-              Math.abs(a.x - desk.x) < 2 &&
-              Math.abs(a.y - desk.y) < 2
+              Math.abs(a.x - desk.x) < 2.5 &&
+              Math.abs(a.y - (desk.y + SEAT_OFFSET)) < 2.5
           )
-          drawDesk(ctx, desk.x, desk.y, busy, now / 1000 + i)
-        })
+        )
+        drawBench(ctx, room.desks, lit, now / 1000)
       }
 
       // Robots, painted back to front so overlaps look right.
@@ -253,12 +265,14 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
     if (!point) return
     const actor = simRef.current.at(point.x, point.y)
     if (actor) {
+      hoveredRoomRef.current = null
       setHovered({ name: actor.name, detail: `${actor.status.toLowerCase()} · ${actor.room}` })
       return
     }
     const room = ROOMS.find(
       (r) => r.w > 0 && point.x > r.x && point.x < r.x + r.w && point.y > r.y && point.y < r.y + r.h
     )
+    hoveredRoomRef.current = room?.id ?? null
     setHovered(room ? { name: room.label, detail: room.meaning } : null)
   }
 
@@ -285,7 +299,10 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
         ref={canvasRef}
         className="h-full w-full cursor-pointer"
         onMouseMove={onMove}
-        onMouseLeave={() => setHovered(null)}
+        onMouseLeave={() => {
+          hoveredRoomRef.current = null
+          setHovered(null)
+        }}
         onClick={onClick}
       />
 
@@ -321,7 +338,7 @@ export function FloorView({ projectId }: { projectId: string }): React.JSX.Eleme
 
       {/* Activity, right */}
       {hud && (
-      <Panel className="bottom-14 right-3 flex h-64 w-64 flex-col">
+      <Panel className="bottom-14 left-3 top-52 flex w-48 flex-col">
         <PanelTitle>Overheard</PanelTitle>
         <div className="scroll-y -mr-1 min-h-0 flex-1 pr-1">
           {store.events.slice(0, 40).map((event) => {
