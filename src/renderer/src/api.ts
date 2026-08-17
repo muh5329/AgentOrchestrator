@@ -142,6 +142,12 @@ export const api = {
     toolkits: (projectId?: string) => invoke<Toolkit[]>('tools.toolkits', { projectId }),
     list: (toolkitId: string) => invoke<Tool[]>('tools.list', { toolkitId }),
     forAgent: (agentId: string) => invoke<Tool[]>('tools.forAgent', { agentId }),
+    run: (agentId: string, tool: string, input: Record<string, unknown> = {}) =>
+      invoke<{ ok: boolean; content: string; executionId: string }>('tools.invoke', {
+        agentId,
+        tool,
+        input
+      }),
     create: (input: Record<string, unknown>) => invoke<Tool>('tools.create', input),
     remove: (toolId: string) => invoke<{ ok: true }>('tools.delete', { toolId })
   },

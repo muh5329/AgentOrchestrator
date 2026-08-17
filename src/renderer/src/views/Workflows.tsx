@@ -236,10 +236,10 @@ function WorkflowEditor({
         source: e.fromNodeId,
         target: e.toNodeId,
         label: e.label ?? undefined,
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#333c4d' },
-        labelStyle: { fill: '#98a1b3', fontSize: 10 },
-        labelBgStyle: { fill: '#0b0d10' },
-        style: { stroke: '#333c4d', strokeWidth: 1.5 }
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#4d4136' },
+        labelStyle: { fill: '#b3a595', fontSize: 10 },
+        labelBgStyle: { fill: '#151210' },
+        style: { stroke: '#4d4136', strokeWidth: 1.5 }
       }))
     )
     setIssues(await api.workflows.validate(workflowId))
@@ -306,10 +306,10 @@ function WorkflowEditor({
             ...connection,
             id: `new_edge_${Date.now()}`,
             label,
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#333c4d' },
-            labelStyle: { fill: '#98a1b3', fontSize: 10 },
-            labelBgStyle: { fill: '#0b0d10' },
-            style: { stroke: '#333c4d', strokeWidth: 1.5 }
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#4d4136' },
+            labelStyle: { fill: '#b3a595', fontSize: 10 },
+            labelBgStyle: { fill: '#151210' },
+            style: { stroke: '#4d4136', strokeWidth: 1.5 }
           },
           current
         )
@@ -459,7 +459,7 @@ function WorkflowEditor({
               minZoom={0.2}
               proOptions={{ hideAttribution: true }}
             >
-              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#1a1f2a" />
+              <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#2d2620" />
               <Controls className="!bg-base-800 !border-edge" showInteractive={false} />
             </ReactFlow>
           </div>

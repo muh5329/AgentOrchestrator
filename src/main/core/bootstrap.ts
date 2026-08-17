@@ -19,6 +19,7 @@ import { WorkflowService } from '../services/workflow-service'
 import { WorkflowEngine } from '../engines/workflow-engine'
 import { GitService } from '../services/git-service'
 import { FleetService } from '../services/fleet-service'
+import { ManualToolService } from '../services/manual-tool-service'
 import { WorkspaceService } from '../services/workspace-service'
 import { ProviderRegistry } from '../runtime/provider-registry'
 import { ToolRuntime } from '../runtime/tool-runtime'
@@ -98,6 +99,7 @@ export function bootstrap(options: BootstrapOptions): BootstrappedApp {
   ctx.git = new GitService(ctx)
   ctx.workspace = new WorkspaceService(ctx)
   ctx.fleet = new FleetService(ctx)
+  ctx.manualTools = new ManualToolService(ctx)
   ctx.providers = new ProviderRegistry(ctx)
   ctx.toolRuntime = new ToolRuntime(ctx)
   ctx.runtime = new AgentRuntime(ctx)

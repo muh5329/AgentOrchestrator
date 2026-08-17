@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import clsx from 'clsx'
 import { useStore, type DocTab } from './store'
-import { Badge, Button, EmptyState, Kbd, StatusDot, formatCost } from './ui'
+import { Badge, Button, EmptyState, Kbd, StatusDot, formatCost, formatTokens } from './ui'
 import { CommandPalette } from './components/CommandPalette'
 import { NewProjectModal } from './components/NewProject'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -235,6 +236,7 @@ export default function App(): React.JSX.Element {
           <div data-pane="toolkit" className="shrink-0" style={{ height: toolkitHeight }}>
             <ToolkitPanel />
           </div>
+          <StatusStrip />
         </aside>
       </div>
 
@@ -249,6 +251,45 @@ export default function App(): React.JSX.Element {
 
       <CommandPalette onNewProject={() => setNewProjectOpen(true)} />
       <NewProjectModal open={newProjectOpen} onClose={() => setNewProjectOpen(false)} />
+    </div>
+  )
+}
+
+/**
+ * A one-line footing for the fleet: how much is moving, how much it has cost,
+ * and whether the provider is actually there. Small enough to ignore, present
+ * enough that "is anything running?" never needs a click.
+ */
+function StatusStrip(): React.JSX.Element {
+  const store = useStore()
+
+  const running = store.fleet.agents.filter((a) => a.status === 'RUNNING').length
+  const blocked = store.fleet.agents.filter((a) => a.status === 'BLOCKED').length
+  const spend = store.fleet.agents.reduce((sum, a) => sum + a.costUsd, 0)
+  const tokens = store.fleet.agents.reduce((sum, a) => sum + a.tokens, 0)
+  const provider = store.providers.find((p) => p.availability?.available)
+
+  return (
+    <div className="flex h-7 shrink-0 items-center gap-3 border-t border-edge bg-base-900 px-3 text-2xs text-ink-faint">
+      <span className="flex items-center gap-1">
+        <StatusDot status={running ? 'RUNNING' : 'IDLE'} />
+        <span className="tabular-nums">{running}</span> running
+      </span>
+      {blocked > 0 && (
+        <span className="text-warn">
+          <span className="tabular-nums">{blocked}</span> blocked
+        </span>
+      )}
+      <span className="tabular-nums">{formatCost(spend)}</span>
+      <span className="tabular-nums">{formatTokens(tokens)}</span>
+      <span className="flex-1" />
+      <span
+        className="truncate"
+        title={provider?.availability?.detail ?? 'No provider is available.'}
+      >
+        {provider ? provider.label : 'no provider'}
+      </span>
+      <span className={clsx('h-1.5 w-1.5 rounded-full', provider ? 'bg-good' : 'bg-bad')} />
     </div>
   )
 }

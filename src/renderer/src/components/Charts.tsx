@@ -16,14 +16,14 @@ import clsx from 'clsx'
  */
 
 export const VIZ = {
-  series: '#5b8cff',
-  good: '#3fbf7f',
-  warn: '#e0a33e',
-  bad: '#e5484d',
-  magic: '#a37bf0',
-  muted: '#5f6a7d',
-  grid: '#232936',
-  ink: '#98a1b3'
+  series: '#e8913c',
+  good: '#6fbf73',
+  warn: '#e8b44c',
+  bad: '#e06552',
+  magic: '#b98ae0',
+  muted: '#7c6d5e',
+  grid: '#332b24',
+  ink: '#b3a595'
 }
 
 /* ------------------------------------------------------------------ */
@@ -196,7 +196,7 @@ export function ScoreTrend({
             cy={ys(p.score)}
             r={hover === i ? 5 : 4}
             fill={p.approved ? VIZ.good : VIZ.bad}
-            stroke="#101318"
+            stroke="#1c1815"
             strokeWidth="2"
           />
         ))}

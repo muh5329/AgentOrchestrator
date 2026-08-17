@@ -146,20 +146,20 @@ export function RobotAvatar({
       </g>
 
       {/* Visor and eyes - drawn last so the face always resolves */}
-      <rect x="2.8" y="4.4" width="6.4" height="2.6" fill="#0b0d10" rx="0.5" />
+      <rect x="2.8" y="4.4" width="6.4" height="2.6" fill="#151210" rx="0.5" />
       <rect x="3.9" y="5.2" width="1.2" height="1.1" fill={face.visor} rx="0.3" />
       <rect x="6.9" y="5.2" width="1.2" height="1.1" fill={face.visor} rx="0.3" />
 
       {/* Mouth grille */}
-      {face.mouth === 0 && <rect x="4.4" y="8" width="3.2" height="0.7" fill="#0b0d10" rx="0.3" />}
+      {face.mouth === 0 && <rect x="4.4" y="8" width="3.2" height="0.7" fill="#151210" rx="0.3" />}
       {face.mouth === 1 && (
         <>
-          <rect x="4.4" y="8" width="0.8" height="0.7" fill="#0b0d10" />
-          <rect x="5.6" y="8" width="0.8" height="0.7" fill="#0b0d10" />
-          <rect x="6.8" y="8" width="0.8" height="0.7" fill="#0b0d10" />
+          <rect x="4.4" y="8" width="0.8" height="0.7" fill="#151210" />
+          <rect x="5.6" y="8" width="0.8" height="0.7" fill="#151210" />
+          <rect x="6.8" y="8" width="0.8" height="0.7" fill="#151210" />
         </>
       )}
-      {face.mouth === 2 && <rect x="4.8" y="8" width="2.4" height="1.1" fill="#0b0d10" rx="0.5" />}
+      {face.mouth === 2 && <rect x="4.8" y="8" width="2.4" height="1.1" fill="#151210" rx="0.5" />}
 
       {/* Running agents get a pulsing ring; everything else is still. */}
       {status === 'RUNNING' && (

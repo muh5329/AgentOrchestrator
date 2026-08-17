@@ -180,6 +180,13 @@ export function createApi(ctx: AppContext): Record<string, (payload: Payload) =>
     'tools.toolkits': (p) => ctx.tools.listToolkits(p.projectId),
     'tools.list': (p) => ctx.tools.listTools(p.toolkitId),
     'tools.forAgent': (p) => ctx.tools.toolsForAgentDetailed(p.agentId),
+    'tools.invoke': (p) =>
+      ctx.manualTools.invoke({
+        agentId: p.agentId,
+        tool: p.tool,
+        input: p.input ?? {},
+        taskId: p.taskId ?? null
+      }),
     'tools.create': (p) => ctx.tools.createCustomTool(p as never),
     'tools.update': (p) => ctx.tools.updateTool(p.toolId, p.patch),
     'tools.delete': (p) => {

@@ -80,15 +80,34 @@ console.log('\nClicking an agent in the rail opens its document and fills the to
 await sessions.getByText('Data Engineer').first().click()
 await window.waitForTimeout(2000)
 check('the agent document opened', await doc.getByText('What it is for').first().isVisible())
-check('its skills are shown', await doc.getByText('Skills').first().isVisible())
+check(
+  'its standing instructions are shown',
+  await doc.getByText('Standing instructions').first().isVisible()
+)
 check('its place in the fleet is shown', await doc.getByText('Place in the fleet').first().isVisible())
 check(
   'the toolkit panel bound to that agent',
   await toolkit.getByText('Data Engineer').first().isVisible()
 )
-const toolCount = await toolkit.locator('span.font-mono').count()
-check('the toolkit lists tools', toolCount > 0, String(toolCount))
+const toolCount = await toolkit.locator('button').filter({ hasText: 'read_file' }).count()
+check('the toolkit lists tools as launchers', toolCount > 0, String(toolCount))
 await window.screenshot({ path: path.join(outDir, 'workbench-agent.png') })
+
+console.log('\nRunning a tool by hand goes through the real gate')
+await toolkit.locator('button').filter({ hasText: 'list_dir' }).first().click()
+await window.waitForTimeout(1000)
+check('the run dialog opened', await window.getByText('Runs as this agent').first().isVisible())
+await window.locator('div.fixed button:has-text("Run")').click()
+await window.waitForTimeout(3000)
+// A real filesystem read of the project workspace, which contains README.md.
+check(
+  'it returned a real result',
+  (await window.locator('div.fixed pre').first().innerText()).length > 0,
+  await window.locator('div.fixed pre').first().innerText().catch(() => 'no output')
+)
+await window.screenshot({ path: path.join(outDir, 'workbench-tool-run.png') })
+await window.locator('div.fixed button:has-text("Close")').click()
+await window.waitForTimeout(600)
 
 console.log('\nProject sections open as tabs in the centre')
 await projects.getByText('Graph').first().click()

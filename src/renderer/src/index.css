@@ -86,14 +86,14 @@
 
 /* React Flow theming */
 .react-flow__background {
-  background-color: #08090b;
+  background-color: #0d0b09;
 }
 .react-flow__edge-path {
-  stroke: #333c4d;
+  stroke: #4d4136;
   stroke-width: 1.5;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #5b8cff;
+  stroke: #e8913c;
 }
 .react-flow__handle {
   opacity: 0;
@@ -103,20 +103,20 @@
 }
 .react-flow__controls {
   box-shadow: none;
-  border: 1px solid #232936;
+  border: 1px solid #332b24;
   border-radius: 6px;
   overflow: hidden;
 }
 .react-flow__controls-button {
-  background: #101318;
-  border-bottom: 1px solid #232936;
-  fill: #98a1b3;
+  background: #1c1815;
+  border-bottom: 1px solid #332b24;
+  fill: #b3a595;
   width: 22px;
   height: 22px;
 }
 .react-flow__controls-button:hover {
-  background: #1a1f2a;
-  fill: #e6e9ef;
+  background: #2d2620;
+  fill: #f0e9e1;
 }
 .react-flow__minimap {
   border-radius: 6px;
@@ -124,13 +124,13 @@
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgba(91, 140, 255, 0.4);
+    box-shadow: 0 0 0 0 rgba(232, 145, 60, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 6px rgba(91, 140, 255, 0);
+    box-shadow: 0 0 0 6px rgba(232, 145, 60, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(91, 140, 255, 0);
+    box-shadow: 0 0 0 0 rgba(232, 145, 60, 0);
   }
 }
 .running-pulse {
@@ -161,7 +161,7 @@
 }
 .col-resizer:hover,
 .col-resizer[data-dragging='true'] {
-  background: #333c4d;
+  background: #4d4136;
 }
 .row-resizer {
   height: 4px;
@@ -172,5 +172,5 @@
 }
 .row-resizer:hover,
 .row-resizer[data-dragging='true'] {
-  background: #333c4d;
+  background: #4d4136;
 }

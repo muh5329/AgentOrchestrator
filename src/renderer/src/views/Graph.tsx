@@ -25,12 +25,12 @@ const H_GAP = 40
 const V_GAP = 70
 
 const EDGE_STYLE: Record<string, { stroke: string; dash?: string; label?: string }> = {
-  PARENT_OF: { stroke: '#333c4d' },
-  DELEGATES_TO: { stroke: '#5b8cff', dash: '6 4', label: 'delegates' },
-  INVOKES: { stroke: '#a37bf0', dash: '2 3', label: 'invokes' },
-  REVIEWS: { stroke: '#e0a33e', dash: '4 4', label: 'reviews' },
-  REPORTS_TO: { stroke: '#232936' },
-  DEPENDS_ON: { stroke: '#57b8d6', dash: '4 4' }
+  PARENT_OF: { stroke: '#4d4136' },
+  DELEGATES_TO: { stroke: '#e8913c', dash: '6 4', label: 'delegates' },
+  INVOKES: { stroke: '#b98ae0', dash: '2 3', label: 'invokes' },
+  REVIEWS: { stroke: '#e8b44c', dash: '4 4', label: 'reviews' },
+  REPORTS_TO: { stroke: '#332b24' },
+  DEPENDS_ON: { stroke: '#69b0b8', dash: '4 4' }
 }
 
 /**
@@ -156,8 +156,8 @@ export function GraphView(): React.JSX.Element {
           target: edge.toAgentId,
           animated: edge.kind === 'INVOKES',
           label: style.label,
-          labelStyle: { fill: '#5f6a7d', fontSize: 9 },
-          labelBgStyle: { fill: '#0b0d10' },
+          labelStyle: { fill: '#7c6d5e', fontSize: 9 },
+          labelBgStyle: { fill: '#151210' },
           style: { stroke: style.stroke, strokeDasharray: style.dash, strokeWidth: 1.5 }
         }
       })
@@ -198,7 +198,7 @@ export function GraphView(): React.JSX.Element {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#1a1f2a" />
+        <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#2d2620" />
         <Controls className="!bg-base-800 !border-edge" showInteractive={false} />
         <MiniMap
           pannable
@@ -208,10 +208,10 @@ export function GraphView(): React.JSX.Element {
           nodeColor={(node) => {
             const agent = (node.data as { agent: AgentGraphNode }).agent
             return agent.status === 'RUNNING'
-              ? '#3fbf7f'
+              ? '#6fbf73'
               : agent.status === 'FAILED'
-                ? '#e5484d'
-                : '#2c3340'
+                ? '#e06552'
+                : '#4a3d32'
           }}
         />
       </ReactFlow>
