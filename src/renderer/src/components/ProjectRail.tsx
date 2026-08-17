@@ -15,6 +15,7 @@ import type { Project } from '@shared/models'
  */
 
 const SECTIONS: Array<{ view: ViewId; label: string; glyph: string }> = [
+  { view: 'floor', label: 'Floor', glyph: '⌂' },
   { view: 'graph', label: 'Graph', glyph: '⌗' },
   { view: 'agents', label: 'Agents', glyph: '◈' },
   { view: 'tasks', label: 'Tasks', glyph: '☰' },

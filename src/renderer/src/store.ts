@@ -18,6 +18,7 @@ import type {
 
 export type ViewId =
   | 'dashboard'
+  | 'floor'
   | 'agents'
   | 'graph'
   | 'tasks'

@@ -22,6 +22,10 @@ This gallery highlights the main surfaces of Agent Orchestrator: the project das
 ![Usage and task activity](./usage.png)
 ![Workflow runs](./workflow-runs.png)
 
+### Floor/Canvas view
+
+![Floor canvas](./floor.png)
+
 ### Agent and workspace tooling
 
 ![Workbench](./workbench.png)

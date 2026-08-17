@@ -109,6 +109,30 @@ await window.screenshot({ path: path.join(outDir, 'workbench-tool-run.png') })
 await window.locator('div.fixed button:has-text("Close")').click()
 await window.waitForTimeout(600)
 
+console.log('\nThe floor draws the fleet as an office')
+await projects.locator('button.pl-8').filter({ hasText: 'Floor' }).first().click()
+await window.waitForTimeout(3500)
+check('a canvas is mounted', (await doc.locator('canvas').count()) === 1)
+check('the roll call is shown', await doc.getByText('Roll call').first().isVisible())
+check('the transport is shown', await doc.getByText('live').first().isVisible())
+// Everyone in the demo project is idle, so the floor should say so rather than
+// inventing motion - this asserts the counts come from real rows.
+const idleRow = await doc.locator('text=Idle').first().isVisible()
+check('it reports the real idle count', idleRow)
+// The canvas must actually paint: a blank one is all one colour.
+const painted = await doc.locator('canvas').evaluate((el) => {
+  const ctx = el.getContext('2d')
+  const data = ctx.getImageData(0, 0, el.width, el.height).data
+  const seen = new Set()
+  for (let i = 0; i < data.length; i += 4000) {
+    seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`)
+    if (seen.size > 12) break
+  }
+  return seen.size
+})
+check('the canvas painted a scene', painted > 6, `${painted} distinct colours`)
+await window.screenshot({ path: path.join(outDir, 'workbench-floor.png') })
+
 console.log('\nProject sections open as tabs in the centre')
 await projects.getByText('Graph').first().click()
 await window.waitForTimeout(1800)

@@ -15,6 +15,7 @@ import { DocTabs } from './components/DocTabs'
 import { Resizer } from './components/Resizer'
 import { ProjectReport } from './views/ProjectReport'
 import { AgentDoc } from './views/AgentDoc'
+import { FloorView } from './views/FloorView'
 import { AgentsView } from './views/Agents'
 import { GraphView } from './views/Graph'
 import { TasksView } from './views/Tasks'
@@ -299,6 +300,8 @@ function TabPane({ tab }: { tab: DocTab }): React.JSX.Element {
   if (tab.kind === 'agent') return <AgentDoc agentId={tab.agentId} />
 
   switch (tab.view) {
+    case 'floor':
+      return <FloorView projectId={tab.projectId} />
     case 'agents':
       return <AgentsView />
     case 'graph':

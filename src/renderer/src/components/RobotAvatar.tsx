@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import clsx from 'clsx'
+import { robotFace } from '../lib/robot'
 
 /**
  * A pixel-art robot generated from an agent's id.
@@ -14,72 +15,6 @@ import clsx from 'clsx'
  * symmetry is what makes an arbitrary bit pattern read as a face.
  */
 
-const GRID = 8
-const HALF = GRID / 2
-
-/** xmur3 - a small, fast, well-distributed string hash. */
-function seedFrom(input: string): () => number {
-  let h = 1779033703 ^ input.length
-  for (let i = 0; i < input.length; i++) {
-    h = Math.imul(h ^ input.charCodeAt(i), 3432918353)
-    h = (h << 13) | (h >>> 19)
-  }
-  // mulberry32, seeded by the hash: deterministic and dependency-free.
-  let a = h >>> 0
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-/**
- * Hues are spread around the wheel rather than picked freely so two agents in
- * the same fleet rarely land on near-identical colours, and every result stays
- * bright enough to read on the dark surface.
- */
-const HUES = [8, 32, 48, 96, 150, 175, 200, 224, 260, 288, 320, 340]
-
-interface Face {
-  body: string
-  visor: string
-  glow: string
-  cells: boolean[][]
-  antenna: boolean
-  ears: boolean
-  mouth: number
-}
-
-function buildFace(seed: string): Face {
-  const rand = seedFrom(seed)
-  const hue = HUES[Math.floor(rand() * HUES.length)]
-  const sat = 55 + Math.floor(rand() * 25)
-
-  const cells: boolean[][] = []
-  for (let y = 0; y < GRID; y++) {
-    const row: boolean[] = new Array(GRID).fill(false)
-    for (let x = 0; x < HALF; x++) {
-      // Denser towards the middle of the head so the silhouette stays solid.
-      const on = rand() > (y < 2 || y > GRID - 3 ? 0.62 : 0.34)
-      row[x] = on
-      row[GRID - 1 - x] = on
-    }
-    cells.push(row)
-  }
-
-  return {
-    body: `hsl(${hue} ${sat}% 62%)`,
-    visor: `hsl(${hue} ${sat}% 82%)`,
-    glow: `hsl(${hue} ${sat}% 46%)`,
-    cells,
-    antenna: rand() > 0.45,
-    ears: rand() > 0.4,
-    mouth: Math.floor(rand() * 3)
-  }
-}
-
 export function RobotAvatar({
   seed,
   size = 26,
@@ -92,7 +27,7 @@ export function RobotAvatar({
   status?: string
   className?: string
 }): React.JSX.Element {
-  const face = useMemo(() => buildFace(seed), [seed])
+  const face = useMemo(() => robotFace(seed), [seed])
 
   // A 12x12 viewBox: an 8x8 head with room for antenna, ears and a base.
   const unit = 1

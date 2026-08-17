@@ -5,6 +5,7 @@ import { RobotAvatar } from './RobotAvatar'
 
 const GLYPH: Record<string, string> = {
   report: '◱',
+  floor: '⌂',
   graph: '⌗',
   agents: '◈',
   tasks: '☰',
