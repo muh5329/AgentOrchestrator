@@ -4,6 +4,9 @@ import { useStore } from '../store'
 import { api } from '../api'
 import { Markdown } from '../components/Markdown'
 import { RobotAvatar } from '../components/RobotAvatar'
+import { ExportAgentModal } from '../components/NewAgent'
+import { WorkLog } from '../components/WorkLog'
+import { Collapsible } from '../components/Collapsible'
 import { Button, formatCost, formatRelative, formatTokens, ScoreBadge, StatusDot } from '../ui'
 import type { Task, Tool } from '@shared/models'
 
@@ -25,6 +28,7 @@ export function AgentDoc({ agentId }: { agentId: string }): React.JSX.Element {
   const [saving, setSaving] = useState(false)
   const [tools, setTools] = useState<Tool[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     if (!agent) return
@@ -147,6 +151,7 @@ export function AgentDoc({ agentId }: { agentId: string }): React.JSX.Element {
                   })
                 }
               />
+              <Chip glyph="⤓" label="Export" onClick={() => setExporting(true)} />
               {editing && (
                 <Button size="sm" variant="primary" onClick={() => void save()} disabled={saving}>
                   {saving ? 'Saving…' : 'Save brief'}
@@ -328,6 +333,21 @@ export function AgentDoc({ agentId }: { agentId: string }): React.JSX.Element {
             </div>
           </Card>
         </Section>
+
+        <ExportAgentModal
+          open={exporting}
+          agentId={agent.id}
+          onClose={() => setExporting(false)}
+        />
+
+        <Collapsible
+          title="Work log"
+          aside="why each run ended the way it did"
+          autoCollapseAbove={9999}
+          defaultOpen={agent.status === 'FAILED'}
+        >
+          <WorkLog agentId={agent.id} />
+        </Collapsible>
 
         <Section title="Work" aside={`${tasks.length} tasks`}>
           {tasks.length === 0 ? (

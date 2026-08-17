@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { useStore } from '../store'
 import { api } from '../api'
 import { RobotAvatar } from './RobotAvatar'
+import { NewAgentModal } from './NewAgent'
 import { BarList, VIZ } from './Charts'
 import { formatCost, formatRelative, formatTokens, StatusDot } from '../ui'
 import type { FleetAgent, FleetProject } from '@shared/models'
@@ -17,6 +18,7 @@ export function SessionsRail(): React.JSX.Element {
   const [tab, setTab] = useState<'sessions' | 'usage'>('sessions')
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const [hiring, setHiring] = useState(false)
 
   const query = filter.trim().toLowerCase()
 
@@ -37,7 +39,23 @@ export function SessionsRail(): React.JSX.Element {
         ))}
         <div className="flex-1" />
         <span className="text-2xs tabular-nums text-ink-faint">{store.fleet.agents.length}</span>
+        <button
+          className="text-sm text-ink-faint hover:text-accent disabled:opacity-30"
+          disabled={!store.activeProjectId}
+          onClick={() => setHiring(true)}
+          title="New agent"
+        >
+          ＋
+        </button>
       </div>
+
+      {store.activeProjectId && (
+        <NewAgentModal
+          open={hiring}
+          projectId={store.activeProjectId}
+          onClose={() => setHiring(false)}
+        />
+      )}
 
       {tab === 'sessions' ? (
         <>

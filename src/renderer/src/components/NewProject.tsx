@@ -133,11 +133,25 @@ export function NewProjectModal({
           label="Workspace folder"
           hint="Where file tools may read and write. Leave blank to use a managed folder inside the app's data directory."
         >
-          <input
-            value={rootPath}
-            onChange={(e) => setRootPath(e.target.value)}
-            placeholder="/Users/you/code/my-project"
-          />
+          <div className="flex gap-1.5">
+            <input
+              className="min-w-0 flex-1"
+              value={rootPath}
+              onChange={(e) => setRootPath(e.target.value)}
+              placeholder="/Users/you/code/my-project"
+            />
+            <Button
+              type="button"
+              onClick={async () => {
+                // A cancelled dialog returns null rather than throwing, so a
+                // change of mind must not clear what was already typed.
+                const picked = await api.dialog.pickFolder(rootPath || undefined)
+                if (picked.path) setRootPath(picked.path)
+              }}
+            >
+              Choose…
+            </Button>
+          </div>
         </Field>
 
         <Field

@@ -1,7 +1,11 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import clsx from 'clsx'
 import { useStore } from '../store'
+import { api } from '../api'
 import { Markdown } from '../components/Markdown'
+import { Collapsible } from '../components/Collapsible'
+import { Changelog } from '../components/Changelog'
+import { Button } from '../ui'
 import { BarList, ScoreTrend, SegmentBar, Sparkline, Tile, VIZ } from '../components/Charts'
 import { RobotAvatar } from '../components/RobotAvatar'
 import { formatCost, formatRelative, formatTokens, ScoreBadge } from '../ui'
@@ -87,7 +91,10 @@ export function ProjectReport({ projectId }: { projectId: string }): React.JSX.E
   return (
     <div className="scroll-y h-full min-h-0">
       <div className="mx-auto max-w-4xl px-8 py-6">
-        <Markdown>{narrative(project, stats, agents.length, met)}</Markdown>
+        <h1 className="text-xl font-semibold text-ink">{project.name}</h1>
+        <Markdown className="mt-1">{statusLine(project, stats, agents.length, met)}</Markdown>
+
+        <Brief project={project} />
 
         <div className="my-5 grid grid-cols-4 gap-2">
           <Tile label="Agents" value={agents.length} hint={`${stats?.agentsRunning ?? 0} running`} />
@@ -116,50 +123,37 @@ export function ProjectReport({ projectId }: { projectId: string }): React.JSX.E
           />
         </div>
 
-        <Section title="Progress">
+        <Collapsible title="Progress" autoCollapseAbove={9999}>
           <SegmentBar segments={buckets} />
-        </Section>
+        </Collapsible>
 
-        {project.acceptanceCriteria.length > 0 && (
-          <Section
-            title="Acceptance criteria"
-            aside={`${met}/${project.acceptanceCriteria.length} met`}
-          >
-            <ul className="space-y-1.5">
-              {project.acceptanceCriteria.map((criterion) => (
-                <li key={criterion.id} className="flex items-start gap-2 text-sm">
-                  <span className={clsx('mt-0.5', criterion.met ? 'text-good' : 'text-ink-faint')}>
-                    {criterion.met ? '✓' : '○'}
-                  </span>
-                  <span className={criterion.met ? 'text-ink-dim' : 'text-ink-faint'}>
-                    {criterion.text}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
+        <Criteria project={project} met={met} />
 
-        <Section
+        <Collapsible
           title="Judge verdicts over time"
           aside={`pass at ${Math.round(project.settings.judgePassThreshold * 100)}%`}
+          autoCollapseAbove={9999}
         >
           <ScoreTrend points={scorePoints} threshold={project.settings.judgePassThreshold} />
-        </Section>
+        </Collapsible>
+
+        <Collapsible title="Changelog" aside="derived from what happened">
+          <Changelog />
+        </Collapsible>
 
         {spend.length > 0 && (
-          <Section title="Spend by agent">
+          <Collapsible title="Spend by agent">
             <BarList data={spend} format={formatCost} />
-          </Section>
+          </Collapsible>
         )}
 
         {activity.length > 0 && (
-          <Section title="Activity" aside={`${store.events.length} events`}>
+          <Collapsible title="Activity" aside={`${store.events.length} events`}>
             <Sparkline values={activity} />
-          </Section>
+          </Collapsible>
         )}
 
-        <Section title="Fleet">
+        <Collapsible title="Fleet">
           <div className="space-y-1">
             {agents.map((agent) => {
               const fleetAgent = store.fleet.agents.find((a) => a.id === agent.id)
@@ -190,9 +184,9 @@ export function ProjectReport({ projectId }: { projectId: string }): React.JSX.E
               )
             })}
           </div>
-        </Section>
+        </Collapsible>
 
-        <Section title="Live activity" aside="newest first">
+        <Collapsible title="Live activity" aside="newest first">
           <div className="space-y-0.5">
             {recent.length === 0 && <p className="text-xs text-ink-faint">Nothing yet.</p>}
             {recent.map((event) => (
@@ -220,35 +214,208 @@ export function ProjectReport({ projectId }: { projectId: string }): React.JSX.E
               </div>
             ))}
           </div>
-        </Section>
+        </Collapsible>
       </div>
     </div>
   )
 }
 
-function Section({
-  title,
-  aside,
-  children
-}: {
-  title: string
-  aside?: string
-  children: React.ReactNode
-}): React.JSX.Element {
+/* ------------------------------------------------------------------ */
+/* The editable parts                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The mission, rendered as markdown and editable in place.
+ *
+ * A mission is the one piece of text everything else is judged against, so it
+ * has to be correctable without leaving the page you noticed the problem on.
+ */
+function Brief({ project }: { project: Project }): React.JSX.Element {
+  const store = useStore()
+  const [editing, setEditing] = useState(false)
+  const [mission, setMission] = useState(project.mission)
+  const [instructions, setInstructions] = useState(project.instructions)
+  const [saving, setSaving] = useState(false)
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      await api.projects.update(project.id, { mission, instructions })
+      await store.refreshProjects()
+      setEditing(false)
+    } catch (err) {
+      useStore.setState({ error: (err as Error).message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <section className="my-5">
-      <div className="mb-2 flex items-baseline gap-2">
-        <h3 className="text-2xs uppercase tracking-wider text-ink-faint">{title}</h3>
-        <span className="flex-1 border-b border-edge" />
-        {aside && <span className="text-2xs text-ink-faint">{aside}</span>}
-      </div>
-      {children}
-    </section>
+    <Collapsible
+      title="Mission"
+      actions={
+        editing ? (
+          <span className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setMission(project.mission)
+                setInstructions(project.instructions)
+                setEditing(false)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => void save()} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </span>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        )
+      }
+    >
+      {editing ? (
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-2xs uppercase tracking-wider text-ink-faint">
+              Mission · markdown
+            </span>
+            <textarea
+              rows={8}
+              value={mission}
+              onChange={(e) => setMission(e.target.value)}
+              className="w-full font-mono text-xs"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-2xs uppercase tracking-wider text-ink-faint">
+              Standing instructions · markdown
+            </span>
+            <textarea
+              rows={5}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              className="w-full font-mono text-xs"
+            />
+          </label>
+        </div>
+      ) : (
+        <>
+          <Markdown>{project.mission || '_No mission set._'}</Markdown>
+          {project.instructions.trim() && (
+            <div className="mt-3 rounded-lg border border-edge bg-base-850 px-3 py-2">
+              <div className="mb-1 text-2xs uppercase tracking-wider text-ink-faint">
+                Standing instructions
+              </div>
+              <Markdown>{project.instructions}</Markdown>
+            </div>
+          )}
+        </>
+      )}
+    </Collapsible>
   )
 }
 
-/** The written part of the report, generated rather than authored. */
-function narrative(
+/**
+ * Acceptance criteria, editable as one criterion per line.
+ *
+ * Edited as text rather than as a list of rows because that is how people write
+ * them, and because reordering, merging and splitting are all just typing. The
+ * `met` flag is preserved by matching on text, so correcting a typo does not
+ * silently un-meet a criterion the Judge has already signed off.
+ */
+function Criteria({ project, met }: { project: Project; met: number }): React.JSX.Element {
+  const store = useStore()
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(project.acceptanceCriteria.map((c) => c.text).join('\n'))
+  const [saving, setSaving] = useState(false)
+
+  const save = async (): Promise<void> => {
+    setSaving(true)
+    try {
+      const lines = text
+        .split('\n')
+        .map((line) => line.replace(/^[-*]\s+/, '').trim())
+        .filter(Boolean)
+      const previous = new Map(project.acceptanceCriteria.map((c) => [c.text, c]))
+      const acceptanceCriteria = lines.map((line, index) => {
+        const kept = previous.get(line)
+        return kept ?? { id: `ac_${Date.now()}_${index}`, text: line, met: false }
+      })
+      await api.projects.update(project.id, { acceptanceCriteria })
+      await store.refreshProjects()
+      setEditing(false)
+    } catch (err) {
+      useStore.setState({ error: (err as Error).message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Collapsible
+      title="Acceptance criteria"
+      aside={`${met}/${project.acceptanceCriteria.length} met`}
+      actions={
+        editing ? (
+          <span className="flex gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setText(project.acceptanceCriteria.map((c) => c.text).join('\n'))
+                setEditing(false)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" onClick={() => void save()} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+          </span>
+        ) : (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+            Edit
+          </Button>
+        )
+      }
+    >
+      {editing ? (
+        <textarea
+          rows={Math.max(6, project.acceptanceCriteria.length + 2)}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="One criterion per line."
+          className="w-full font-mono text-xs"
+        />
+      ) : project.acceptanceCriteria.length === 0 ? (
+        <p className="text-xs text-ink-faint">
+          None set. Without criteria the Judge has nothing to score the project against.
+        </p>
+      ) : (
+        <ul className="space-y-1.5">
+          {project.acceptanceCriteria.map((criterion) => (
+            <li key={criterion.id} className="flex items-start gap-2 text-sm">
+              <span className={clsx('mt-0.5', criterion.met ? 'text-good' : 'text-ink-faint')}>
+                {criterion.met ? '✓' : '○'}
+              </span>
+              <span className={clsx('min-w-0 flex-1', criterion.met ? 'text-ink-dim' : 'text-ink-faint')}>
+                <Markdown>{criterion.text}</Markdown>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Collapsible>
+  )
+}
+
+/** The generated status line, as distinct from the authored mission. */
+function statusLine(
   project: Project,
   stats: ReturnType<typeof useStore.getState>['stats'],
   agentCount: number,
@@ -276,10 +443,6 @@ function narrative(
         )}%.`
 
   return [
-    `# ${project.name}`,
-    '',
-    project.mission || project.description || '_No mission set._',
-    '',
     status,
     '',
     judged,

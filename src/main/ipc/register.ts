@@ -1,4 +1,4 @@
-import { ipcMain, type BrowserWindow } from 'electron'
+import { dialog, ipcMain, type BrowserWindow } from 'electron'
 import type { AppContext } from '../core/context'
 import { serializeError } from '../core/errors'
 import { createApi } from './api'
@@ -21,6 +21,26 @@ export interface IpcResponse<T = unknown> {
  */
 export function registerIpc(ctx: AppContext, getWindows: () => BrowserWindow[]): () => void {
   const api = createApi(ctx)
+
+  /**
+   * The native folder chooser.
+   *
+   * It lives here rather than in the api table because it needs a window to
+   * hang the sheet off, and `createApi` deliberately knows nothing about
+   * windows. Returning null for a cancelled dialog rather than throwing keeps
+   * "the person changed their mind" out of the error path.
+   */
+  api['dialog.pickFolder'] = async (payload) => {
+    const parent = getWindows()[0]
+    const result = await dialog.showOpenDialog(parent, {
+      title: typeof payload.title === 'string' ? payload.title : 'Choose a workspace folder',
+      defaultPath: typeof payload.defaultPath === 'string' ? payload.defaultPath : undefined,
+      buttonLabel: 'Use this folder',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (result.canceled || !result.filePaths.length) return { path: null }
+    return { path: result.filePaths[0] }
+  }
 
   ipcMain.handle(
     IPC_INVOKE,
